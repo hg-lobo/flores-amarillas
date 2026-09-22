@@ -5,10 +5,7 @@ import {
   EffectComposer,
   Bloom,
   Vignette,
-  ChromaticAberration,
-  Noise,
 } from "@react-three/postprocessing";
-import { BlendFunction } from "postprocessing";
 import { Environment } from "@react-three/drei";
 import { Suspense, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
@@ -35,9 +32,6 @@ const TOTAL_SECTIONS = 5;
 const SECTION_CAMERA_Y = [0, -0.2, -0.4, -0.6, -0.8];
 const SECTION_LOOK_AT_Y = [0, -0.2, -0.4, -0.6, -0.8];
 
-// ============================================================
-// HOOK: detecta móvil y tablet
-// ============================================================
 function useDevice() {
   const [device, setDevice] = useState<"mobile" | "tablet" | "desktop">(
     "desktop"
@@ -58,9 +52,6 @@ function useDevice() {
   return device;
 }
 
-// ============================================================
-// CÁMARA
-// ============================================================
 function SectionCamera({ section }: { section: number }) {
   const { camera } = useThree();
   const targetY = useRef(SECTION_CAMERA_Y[0]);
@@ -104,26 +95,28 @@ function SectionCamera({ section }: { section: number }) {
 }
 
 // ============================================================
-// ESCENA 3D (optimizada por dispositivo)
+// ESCENA 3D — Optimizada PERO manteniendo el look
 // ============================================================
 function Scene({ section, device }: { section: number; device: string }) {
   const isMobile = device === "mobile";
   const isTablet = device === "tablet";
 
-  // Partículas adaptadas al dispositivo
-  const fireflyCount = isMobile ? 20 : isTablet ? 80 : 150;
-  const pollenCount = isMobile ? 12 : isTablet ? 45 : 70;
-  const petalCount = isMobile ? 4 : isTablet ? 15 : 25;
+  // Partículas: menos en móvil pero sigue habiendo ambiente
+  const fireflyCount = isMobile ? 50 : isTablet ? 100 : 150;
+  const pollenCount = isMobile ? 30 : isTablet ? 50 : 70;
+  const petalCount = isMobile ? 12 : isTablet ? 18 : 25;
 
   return (
     <Canvas
       camera={{ position: [0, 0, 0.6], fov: 38 }}
       gl={{
-        antialias: !isMobile,
+        antialias: true,
         powerPreference: "high-performance",
         alpha: false,
       }}
-      dpr={isMobile ? 1 : [1, 2]}
+      // Móvil: DPR 1.5 (balance entre calidad y rendimiento)
+      dpr={isMobile ? [1, 1.5] : [1, 2]}
+      // Sombras solo en desktop (es lo más caro)
       shadows={isMobile ? false : "soft"}
       onCreated={({ gl }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping;
@@ -132,13 +125,15 @@ function Scene({ section, device }: { section: number; device: string }) {
     >
       <fog attach="fog" args={["#0a0404", 3, 7]} />
 
+      {/* Cielo con degradado (mantener en todos) */}
       <SkyGradient />
 
-      <ambientLight intensity={0.35} color="#ffffff" />
+      {/* Luces: reducir cantidad en móvil pero mantener el color cálido */}
+      <ambientLight intensity={isMobile ? 0.5 : 0.35} color="#ffe0a0" />
 
       <directionalLight
         position={[3, 4, 2]}
-        intensity={3.0}
+        intensity={isMobile ? 2.8 : 3.0}
         color="#ffe0a0"
         castShadow={!isMobile}
         shadow-mapSize-width={isMobile ? 512 : 2048}
@@ -149,16 +144,29 @@ function Scene({ section, device }: { section: number; device: string }) {
         shadow-radius={4}
       />
 
-      <directionalLight position={[-3, 2, 2]} intensity={0.8} color="#ffbb77" />
-      <directionalLight position={[-1, 2, -4]} intensity={2.2} color="#ff8844" />
+      {/* Rim light: MANTENER en todos, da el brillo cálido */}
+      <directionalLight
+        position={[-3, 2, 2]}
+        intensity={isMobile ? 1.0 : 0.8}
+        color="#ffbb77"
+      />
 
-      <pointLight position={[0, -1, 0.5]} intensity={0.7} color="#ffaa55" />
+      <directionalLight
+        position={[-1, 2, -4]}
+        intensity={isMobile ? 2.0 : 2.2}
+        color="#ff8844"
+      />
 
-      {/* Environment: solo en desktop/tablet */}
-      {!isMobile && (
-        <Environment preset="sunset" environmentIntensity={0.3} />
-      )}
+      <pointLight
+        position={[0, -1, 0.5]}
+        intensity={isMobile ? 0.9 : 0.7}
+        color="#ffaa55"
+      />
 
+      {/* Environment: MANTENER en todos (es lo que da el look cálido) */}
+      <Environment preset="sunset" environmentIntensity={0.3} />
+
+      {/* Partículas: mantener en todos */}
       <Fireflies count={fireflyCount} />
       <Pollen count={pollenCount} />
       <FallingPetals count={petalCount} />
@@ -169,29 +177,16 @@ function Scene({ section, device }: { section: number; device: string }) {
 
       <SectionCamera section={section} />
 
-      {/* Post-processing: SOLO en desktop y tablet */}
-      {!isMobile && (
-        <EffectComposer multisampling={isTablet ? 0 : 4}>
-          <Bloom
-            intensity={isTablet ? 0.5 : 0.8}
-            luminanceThreshold={0.65}
-            luminanceSmoothing={0.5}
-            mipmapBlur
-          />
-          {!isTablet && (
-            <ChromaticAberration
-              blendFunction={BlendFunction.NORMAL}
-              offset={new THREE.Vector2(0.0006, 0.0006)}
-              radialModulation={false}
-              modulationOffset={0}
-            />
-          )}
-          {!isTablet && (
-            <Noise opacity={0.025} blendFunction={BlendFunction.OVERLAY} />
-          )}
-          <Vignette eskil={false} offset={0.3} darkness={0.85} />
-        </EffectComposer>
-      )}
+      {/* Post-processing: mantener Bloom y Vignette en TODOS (es lo que da el brillo) */}
+      <EffectComposer multisampling={isMobile ? 0 : 4}>
+        <Bloom
+          intensity={isMobile ? 0.6 : 0.8}
+          luminanceThreshold={0.65}
+          luminanceSmoothing={0.5}
+          mipmapBlur
+        />
+        <Vignette eskil={false} offset={0.3} darkness={0.85} />
+      </EffectComposer>
     </Canvas>
   );
 }
@@ -365,12 +360,10 @@ export default function Home() {
         WebkitTapHighlightColor: "transparent",
       }}
     >
-      {/* Escena 3D con ErrorBoundary */}
       <SceneErrorBoundary fallback={<WebGLFallback />}>
         <Scene section={section} device={device} />
       </SceneErrorBoundary>
 
-      {/* Overlay oscuro sección 4 */}
       <div
         style={{
           position: "absolute",
@@ -384,7 +377,6 @@ export default function Home() {
         }}
       />
 
-      {/* Hero */}
       <div
         style={{
           position: "absolute",
@@ -419,7 +411,6 @@ export default function Home() {
         </h1>
       </div>
 
-      {/* Mensajes del tallo */}
       {stemMessages.map((msg, i) => (
         <TextBeat
           key={msg.id}
@@ -430,7 +421,6 @@ export default function Home() {
         />
       ))}
 
-      {/* Fotos artesanales */}
       <CraftPhoto
         src={sectionPhotos[0].src}
         caption={sectionPhotos[0].caption}
@@ -456,17 +446,14 @@ export default function Home() {
         delay={0.5}
       />
 
-      {/* Fotos finales */}
       <PhotoGarden visible={section === 4} />
 
-      {/* Indicador */}
       <SectionIndicator
         total={TOTAL_SECTIONS}
         current={section}
         onDotClick={goTo}
       />
 
-      {/* Hint scroll */}
       <div
         style={{
           position: "absolute",
@@ -487,9 +474,6 @@ export default function Home() {
         scroll ↓
       </div>
 
-      {/* ============ STICKERS ============ */}
-
-      {/* Sección 0 (Hero) */}
       {section === 0 && (
         <>
           <StickerHeart
@@ -530,22 +514,9 @@ export default function Home() {
             delay={1.0}
             visible
           />
-          <StickerStar
-            style={{ position: "absolute", top: "55%", left: "3%", transform: "rotate(-20deg)" }}
-            size={isMobile ? 12 : 16}
-            delay={1.1}
-            visible
-          />
-          <StickerStar
-            style={{ position: "absolute", bottom: "35%", right: "4%", transform: "rotate(15deg)" }}
-            size={isMobile ? 14 : 20}
-            delay={1.2}
-            visible
-          />
         </>
       )}
 
-      {/* Sección 1 */}
       {section === 1 && (
         <>
           <StickerHeart
@@ -567,22 +538,9 @@ export default function Home() {
             delay={0.8}
             visible
           />
-          <StickerStar
-            style={{ position: "absolute", top: "8%", left: "16%", transform: "rotate(-15deg)" }}
-            size={isMobile ? 12 : 18}
-            delay={0.9}
-            visible
-          />
-          <StickerStar
-            style={{ position: "absolute", bottom: "15%", left: "18%", transform: "rotate(20deg)" }}
-            size={isMobile ? 14 : 20}
-            delay={1.0}
-            visible
-          />
         </>
       )}
 
-      {/* Sección 2 */}
       {section === 2 && (
         <>
           <StickerHeart
@@ -604,22 +562,9 @@ export default function Home() {
             delay={0.8}
             visible
           />
-          <StickerStar
-            style={{ position: "absolute", top: "8%", right: "16%", transform: "rotate(15deg)" }}
-            size={isMobile ? 12 : 18}
-            delay={0.9}
-            visible
-          />
-          <StickerStar
-            style={{ position: "absolute", bottom: "15%", right: "18%", transform: "rotate(-20deg)" }}
-            size={isMobile ? 14 : 20}
-            delay={1.0}
-            visible
-          />
         </>
       )}
 
-      {/* Sección 3 */}
       {section === 3 && (
         <>
           <StickerHeart
@@ -639,18 +584,6 @@ export default function Home() {
             style={{ position: "absolute", top: "12%", left: "5%", transform: "rotate(10deg)" }}
             size={isMobile ? 14 : 22}
             delay={0.8}
-            visible
-          />
-          <StickerStar
-            style={{ position: "absolute", top: "8%", left: "16%", transform: "rotate(-15deg)" }}
-            size={isMobile ? 12 : 18}
-            delay={0.9}
-            visible
-          />
-          <StickerStar
-            style={{ position: "absolute", bottom: "15%", left: "18%", transform: "rotate(18deg)" }}
-            size={isMobile ? 14 : 20}
-            delay={1.0}
             visible
           />
         </>
