@@ -38,6 +38,7 @@ export default function useSections(totalSections: number) {
 
     const handleTouchEnd = (e: TouchEvent) => {
       const deltaY = touchStartYRef.current - e.changedTouches[0].clientY;
+      // 60px de tolerancia: se siente natural en móvil
       if (Math.abs(deltaY) < 60) return;
       triggerChange(deltaY > 0 ? 1 : -1);
     };

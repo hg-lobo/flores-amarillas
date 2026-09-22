@@ -21,6 +21,8 @@ import TextBeat from "@/components/TextBeat";
 import SectionIndicator from "@/components/SectionIndicator";
 import PhotoGarden from "@/components/PhotoGarden";
 import useSections from "@/components/useSections";
+import SceneErrorBoundary from "@/components/SceneErrorBoundary";
+import WebGLFallback from "@/components/WebGLFallback";
 import { heroTitle, stemMessages } from "@/data/messages";
 import {
   StickerHeart,
@@ -34,19 +36,26 @@ const SECTION_CAMERA_Y = [0, -0.2, -0.4, -0.6, -0.8];
 const SECTION_LOOK_AT_Y = [0, -0.2, -0.4, -0.6, -0.8];
 
 // ============================================================
-// HOOK: detecta si es móvil
+// HOOK: detecta móvil y tablet
 // ============================================================
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(false);
+function useDevice() {
+  const [device, setDevice] = useState<"mobile" | "tablet" | "desktop">(
+    "desktop"
+  );
 
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth <= 768);
+    const check = () => {
+      const w = window.innerWidth;
+      if (w <= 768) setDevice("mobile");
+      else if (w <= 1024) setDevice("tablet");
+      else setDevice("desktop");
+    };
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  return isMobile;
+  return device;
 }
 
 // ============================================================
@@ -95,14 +104,27 @@ function SectionCamera({ section }: { section: number }) {
 }
 
 // ============================================================
-// ESCENA
+// ESCENA 3D (optimizada por dispositivo)
 // ============================================================
-function Scene({ section }: { section: number }) {
+function Scene({ section, device }: { section: number; device: string }) {
+  const isMobile = device === "mobile";
+  const isTablet = device === "tablet";
+
+  // Partículas adaptadas al dispositivo
+  const fireflyCount = isMobile ? 20 : isTablet ? 80 : 150;
+  const pollenCount = isMobile ? 12 : isTablet ? 45 : 70;
+  const petalCount = isMobile ? 4 : isTablet ? 15 : 25;
+
   return (
     <Canvas
       camera={{ position: [0, 0, 0.6], fov: 38 }}
-      gl={{ antialias: true }}
-      shadows="soft"
+      gl={{
+        antialias: !isMobile,
+        powerPreference: "high-performance",
+        alpha: false,
+      }}
+      dpr={isMobile ? 1 : [1, 2]}
+      shadows={isMobile ? false : "soft"}
       onCreated={({ gl }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping;
         gl.toneMappingExposure = 1.0;
@@ -118,9 +140,9 @@ function Scene({ section }: { section: number }) {
         position={[3, 4, 2]}
         intensity={3.0}
         color="#ffe0a0"
-        castShadow
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
+        castShadow={!isMobile}
+        shadow-mapSize-width={isMobile ? 512 : 2048}
+        shadow-mapSize-height={isMobile ? 512 : 2048}
         shadow-camera-near={0.5}
         shadow-camera-far={20}
         shadow-bias={-0.0001}
@@ -132,11 +154,14 @@ function Scene({ section }: { section: number }) {
 
       <pointLight position={[0, -1, 0.5]} intensity={0.7} color="#ffaa55" />
 
-      <Environment preset="sunset" environmentIntensity={0.3} />
+      {/* Environment: solo en desktop/tablet */}
+      {!isMobile && (
+        <Environment preset="sunset" environmentIntensity={0.3} />
+      )}
 
-      <Fireflies count={150} />
-      <Pollen count={70} />
-      <FallingPetals count={25} />
+      <Fireflies count={fireflyCount} />
+      <Pollen count={pollenCount} />
+      <FallingPetals count={petalCount} />
 
       <Suspense fallback={null}>
         <Flower />
@@ -144,22 +169,29 @@ function Scene({ section }: { section: number }) {
 
       <SectionCamera section={section} />
 
-      <EffectComposer multisampling={4}>
-        <Bloom
-          intensity={0.8}
-          luminanceThreshold={0.65}
-          luminanceSmoothing={0.5}
-          mipmapBlur
-        />
-        <ChromaticAberration
-          blendFunction={BlendFunction.NORMAL}
-          offset={new THREE.Vector2(0.0006, 0.0006)}
-          radialModulation={false}
-          modulationOffset={0}
-        />
-        <Noise opacity={0.025} blendFunction={BlendFunction.OVERLAY} />
-        <Vignette eskil={false} offset={0.3} darkness={0.85} />
-      </EffectComposer>
+      {/* Post-processing: SOLO en desktop y tablet */}
+      {!isMobile && (
+        <EffectComposer multisampling={isTablet ? 0 : 4}>
+          <Bloom
+            intensity={isTablet ? 0.5 : 0.8}
+            luminanceThreshold={0.65}
+            luminanceSmoothing={0.5}
+            mipmapBlur
+          />
+          {!isTablet && (
+            <ChromaticAberration
+              blendFunction={BlendFunction.NORMAL}
+              offset={new THREE.Vector2(0.0006, 0.0006)}
+              radialModulation={false}
+              modulationOffset={0}
+            />
+          )}
+          {!isTablet && (
+            <Noise opacity={0.025} blendFunction={BlendFunction.OVERLAY} />
+          )}
+          <Vignette eskil={false} offset={0.3} darkness={0.85} />
+        </EffectComposer>
+      )}
     </Canvas>
   );
 }
@@ -239,7 +271,7 @@ function CraftPhoto({
             right: 0,
             textAlign: "center",
             fontFamily: "'Brush Script MT', 'Caveat', cursive",
-            fontSize: "clamp(0.75rem, 1vw, 1rem)",
+            fontSize: "clamp(0.7rem, 1vw, 1rem)",
             color: "#6a3a1a",
             margin: 0,
             letterSpacing: "0.02em",
@@ -271,7 +303,8 @@ function CraftPhoto({
 // ============================================================
 export default function Home() {
   const { section, goTo } = useSections(TOTAL_SECTIONS);
-  const isMobile = useIsMobile();
+  const device = useDevice();
+  const isMobile = device === "mobile";
 
   const sectionPhotos = [
     { src: "/fotos/YoyA.jpg", caption: "Angélica & Me" },
@@ -282,22 +315,22 @@ export default function Home() {
   const photoStyles = isMobile
     ? {
         section1: {
-          top: "28%",
+          top: "24%",
           left: "50%",
           transform: "translateX(-50%)",
-          width: "clamp(140px, 40vw, 200px)",
+          width: "clamp(120px, 45vw, 180px)",
         } as React.CSSProperties,
         section2: {
-          top: "28%",
+          top: "24%",
           left: "50%",
           transform: "translateX(-50%)",
-          width: "clamp(140px, 40vw, 200px)",
+          width: "clamp(120px, 45vw, 180px)",
         } as React.CSSProperties,
         section3: {
-          top: "28%",
+          top: "24%",
           left: "50%",
           transform: "translateX(-50%)",
-          width: "clamp(140px, 40vw, 200px)",
+          width: "clamp(120px, 45vw, 180px)",
         } as React.CSSProperties,
         rotation: 0,
       }
@@ -305,17 +338,17 @@ export default function Home() {
         section1: {
           top: "50%",
           left: "15%",
-          width: "clamp(220px, 24vw, 340px)",
+          width: "clamp(200px, 22vw, 320px)",
         } as React.CSSProperties,
         section2: {
           top: "50%",
           right: "15%",
-          width: "clamp(220px, 24vw, 340px)",
+          width: "clamp(200px, 22vw, 320px)",
         } as React.CSSProperties,
         section3: {
           top: "50%",
           left: "15%",
-          width: "clamp(220px, 24vw, 340px)",
+          width: "clamp(200px, 22vw, 320px)",
         } as React.CSSProperties,
         rotation: -4,
       };
@@ -329,9 +362,13 @@ export default function Home() {
         background: "#0a0404",
         overflow: "hidden",
         touchAction: "none",
+        WebkitTapHighlightColor: "transparent",
       }}
     >
-      <Scene section={section} />
+      {/* Escena 3D con ErrorBoundary */}
+      <SceneErrorBoundary fallback={<WebGLFallback />}>
+        <Scene section={section} device={device} />
+      </SceneErrorBoundary>
 
       {/* Overlay oscuro sección 4 */}
       <div
@@ -347,11 +384,11 @@ export default function Home() {
         }}
       />
 
-      {/* Hero (sección 0) */}
+      {/* Hero */}
       <div
         style={{
           position: "absolute",
-          top: isMobile ? "8%" : "7%",
+          top: isMobile ? "5%" : "7%",
           left: 0,
           right: 0,
           textAlign: "center",
@@ -369,7 +406,7 @@ export default function Home() {
           className="font-serif"
           style={{
             fontSize: isMobile
-              ? "clamp(1.2rem, 5vw, 1.8rem)"
+              ? "clamp(1rem, 5vw, 1.5rem)"
               : "clamp(1.4rem, 3.5vw, 2.4rem)",
             fontWeight: 400,
             letterSpacing: "0.06em",
@@ -402,7 +439,6 @@ export default function Home() {
         visible={section === 1}
         delay={0.5}
       />
-
       <CraftPhoto
         src={sectionPhotos[1].src}
         caption={sectionPhotos[1].caption}
@@ -411,7 +447,6 @@ export default function Home() {
         visible={section === 2}
         delay={0.5}
       />
-
       <CraftPhoto
         src={sectionPhotos[2].src}
         caption={sectionPhotos[2].caption}
@@ -443,7 +478,7 @@ export default function Home() {
           transition: "opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1)",
           pointerEvents: "none",
           zIndex: 10,
-          fontSize: "0.75rem",
+          fontSize: "0.7rem",
           letterSpacing: "0.3em",
           textTransform: "uppercase",
           fontFamily: "monospace",
@@ -458,52 +493,52 @@ export default function Home() {
       {section === 0 && (
         <>
           <StickerHeart
-            style={{ position: "absolute", top: "5%", left: "8%", transform: "rotate(-15deg)" }}
-            size={isMobile ? 22 : 28}
+            style={{ position: "absolute", top: "5%", left: "6%", transform: "rotate(-15deg)" }}
+            size={isMobile ? 18 : 28}
             color="#ff5577"
             delay={0.3}
             visible
           />
           <StickerHeart
-            style={{ position: "absolute", top: "12%", right: "10%", transform: "rotate(20deg)" }}
-            size={isMobile ? 26 : 34}
+            style={{ position: "absolute", top: "12%", right: "8%", transform: "rotate(20deg)" }}
+            size={isMobile ? 20 : 34}
             color="#ff99aa"
             delay={0.5}
             visible
           />
           <StickerFlower
-            style={{ position: "absolute", bottom: "15%", left: "12%", transform: "rotate(15deg)" }}
-            size={isMobile ? 30 : 40}
+            style={{ position: "absolute", bottom: "15%", left: "8%", transform: "rotate(15deg)" }}
+            size={isMobile ? 24 : 40}
             delay={0.6}
             visible
           />
           <StickerFlower
-            style={{ position: "absolute", bottom: "20%", right: "8%", transform: "rotate(-25deg)" }}
-            size={isMobile ? 28 : 36}
+            style={{ position: "absolute", bottom: "20%", right: "6%", transform: "rotate(-25deg)" }}
+            size={isMobile ? 22 : 36}
             delay={0.7}
             visible
           />
           <StickerStar
-            style={{ position: "absolute", top: "35%", left: "5%", transform: "rotate(10deg)" }}
-            size={isMobile ? 18 : 22}
+            style={{ position: "absolute", top: "35%", left: "4%", transform: "rotate(10deg)" }}
+            size={isMobile ? 14 : 22}
             delay={0.9}
             visible
           />
           <StickerStar
-            style={{ position: "absolute", top: "25%", right: "6%", transform: "rotate(-10deg)" }}
-            size={isMobile ? 14 : 18}
+            style={{ position: "absolute", top: "25%", right: "5%", transform: "rotate(-10deg)" }}
+            size={isMobile ? 12 : 18}
             delay={1.0}
             visible
           />
           <StickerStar
-            style={{ position: "absolute", top: "55%", left: "4%", transform: "rotate(-20deg)" }}
-            size={isMobile ? 14 : 16}
+            style={{ position: "absolute", top: "55%", left: "3%", transform: "rotate(-20deg)" }}
+            size={isMobile ? 12 : 16}
             delay={1.1}
             visible
           />
           <StickerStar
-            style={{ position: "absolute", bottom: "35%", right: "5%", transform: "rotate(15deg)" }}
-            size={isMobile ? 16 : 20}
+            style={{ position: "absolute", bottom: "35%", right: "4%", transform: "rotate(15deg)" }}
+            size={isMobile ? 14 : 20}
             delay={1.2}
             visible
           />
@@ -515,32 +550,32 @@ export default function Home() {
         <>
           <StickerHeart
             style={{ position: "absolute", top: "45%", left: "3%", transform: "rotate(-20deg)" }}
-            size={26}
+            size={isMobile ? 18 : 26}
             color="#ff5577"
             delay={0.4}
             visible
           />
           <StickerFlower
-            style={{ position: "absolute", bottom: "12%", left: "8%", transform: "rotate(15deg)" }}
-            size={34}
+            style={{ position: "absolute", bottom: "12%", left: "6%", transform: "rotate(15deg)" }}
+            size={isMobile ? 22 : 34}
             delay={0.6}
             visible
           />
           <StickerStar
-            style={{ position: "absolute", top: "12%", left: "6%", transform: "rotate(10deg)" }}
-            size={22}
+            style={{ position: "absolute", top: "12%", left: "5%", transform: "rotate(10deg)" }}
+            size={isMobile ? 14 : 22}
             delay={0.8}
             visible
           />
           <StickerStar
-            style={{ position: "absolute", top: "8%", left: "18%", transform: "rotate(-15deg)" }}
-            size={18}
+            style={{ position: "absolute", top: "8%", left: "16%", transform: "rotate(-15deg)" }}
+            size={isMobile ? 12 : 18}
             delay={0.9}
             visible
           />
           <StickerStar
-            style={{ position: "absolute", bottom: "15%", left: "20%", transform: "rotate(20deg)" }}
-            size={20}
+            style={{ position: "absolute", bottom: "15%", left: "18%", transform: "rotate(20deg)" }}
+            size={isMobile ? 14 : 20}
             delay={1.0}
             visible
           />
@@ -552,32 +587,32 @@ export default function Home() {
         <>
           <StickerHeart
             style={{ position: "absolute", top: "45%", right: "3%", transform: "rotate(20deg)" }}
-            size={28}
+            size={isMobile ? 18 : 28}
             color="#ff5577"
             delay={0.4}
             visible
           />
           <StickerFlower
-            style={{ position: "absolute", bottom: "12%", right: "8%", transform: "rotate(-15deg)" }}
-            size={36}
+            style={{ position: "absolute", bottom: "12%", right: "6%", transform: "rotate(-15deg)" }}
+            size={isMobile ? 22 : 36}
             delay={0.6}
             visible
           />
           <StickerStar
-            style={{ position: "absolute", top: "12%", right: "6%", transform: "rotate(-10deg)" }}
-            size={22}
+            style={{ position: "absolute", top: "12%", right: "5%", transform: "rotate(-10deg)" }}
+            size={isMobile ? 14 : 22}
             delay={0.8}
             visible
           />
           <StickerStar
-            style={{ position: "absolute", top: "8%", right: "18%", transform: "rotate(15deg)" }}
-            size={18}
+            style={{ position: "absolute", top: "8%", right: "16%", transform: "rotate(15deg)" }}
+            size={isMobile ? 12 : 18}
             delay={0.9}
             visible
           />
           <StickerStar
-            style={{ position: "absolute", bottom: "15%", right: "20%", transform: "rotate(-20deg)" }}
-            size={20}
+            style={{ position: "absolute", bottom: "15%", right: "18%", transform: "rotate(-20deg)" }}
+            size={isMobile ? 14 : 20}
             delay={1.0}
             visible
           />
@@ -589,32 +624,32 @@ export default function Home() {
         <>
           <StickerHeart
             style={{ position: "absolute", top: "45%", left: "3%", transform: "rotate(-18deg)" }}
-            size={30}
+            size={isMobile ? 20 : 30}
             color="#ff99aa"
             delay={0.4}
             visible
           />
           <StickerFlower
-            style={{ position: "absolute", bottom: "12%", left: "8%", transform: "rotate(20deg)" }}
-            size={38}
+            style={{ position: "absolute", bottom: "12%", left: "6%", transform: "rotate(20deg)" }}
+            size={isMobile ? 24 : 38}
             delay={0.6}
             visible
           />
           <StickerStar
-            style={{ position: "absolute", top: "12%", left: "6%", transform: "rotate(10deg)" }}
-            size={22}
+            style={{ position: "absolute", top: "12%", left: "5%", transform: "rotate(10deg)" }}
+            size={isMobile ? 14 : 22}
             delay={0.8}
             visible
           />
           <StickerStar
-            style={{ position: "absolute", top: "8%", left: "18%", transform: "rotate(-15deg)" }}
-            size={18}
+            style={{ position: "absolute", top: "8%", left: "16%", transform: "rotate(-15deg)" }}
+            size={isMobile ? 12 : 18}
             delay={0.9}
             visible
           />
           <StickerStar
-            style={{ position: "absolute", bottom: "15%", left: "20%", transform: "rotate(18deg)" }}
-            size={20}
+            style={{ position: "absolute", bottom: "15%", left: "18%", transform: "rotate(18deg)" }}
+            size={isMobile ? 14 : 20}
             delay={1.0}
             visible
           />

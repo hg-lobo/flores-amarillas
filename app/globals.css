@@ -1,8 +1,5 @@
 @import "tailwindcss";
 
-/* ============================================
-   Variables globales del proyecto
-   ============================================ */
 :root {
   --color-cream: #fdf6e3;
   --color-warm-amber: #f5c469;
@@ -13,9 +10,6 @@
   --color-petal: #ffd93d;
 }
 
-/* ============================================
-   Reset y base
-   ============================================ */
 html,
 body {
   margin: 0;
@@ -24,27 +18,23 @@ body {
   color: var(--color-cream);
   font-family: var(--font-sans), system-ui, sans-serif;
   overflow-x: hidden;
+  max-width: 100vw;
 }
 
-/* ============================================
-   Canvas 3D ocupa toda la pantalla
-   ============================================ */
+* {
+  box-sizing: border-box;
+}
+
 canvas {
   display: block;
   touch-action: none;
 }
 
-/* ============================================
-   Selección de texto con color cálido
-   ============================================ */
 ::selection {
   background: var(--color-warm-amber);
   color: var(--color-dusk);
 }
 
-/* ============================================
-   Scrollbar minimalista
-   ============================================ */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -59,9 +49,6 @@ canvas {
   background: rgba(245, 196, 105, 0.6);
 }
 
-/* ============================================
-   Tipografías
-   ============================================ */
 .font-serif {
   font-family: var(--font-serif), Georgia, serif;
 }
@@ -70,7 +57,6 @@ canvas {
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
-/* Lenis: scroll suave */
 html.lenis,
 html.lenis body {
   height: auto;
