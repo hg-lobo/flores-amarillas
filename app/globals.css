@@ -1,26 +1,93 @@
 @import "tailwindcss";
 
+/* ============================================
+   Variables globales del proyecto
+   ============================================ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-cream: #fdf6e3;
+  --color-warm-amber: #f5c469;
+  --color-deep-gold: #d99a2b;
+  --color-soft-green: #7a9b5e;
+  --color-deep-green: #3d5a3d;
+  --color-dusk: #2a1f1a;
+  --color-petal: #ffd93d;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* ============================================
+   Reset y base
+   ============================================ */
+html,
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  padding: 0;
+  background: var(--color-dusk);
+  color: var(--color-cream);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  overflow-x: hidden;
+}
+
+/* ============================================
+   Canvas 3D ocupa toda la pantalla
+   ============================================ */
+canvas {
+  display: block;
+  touch-action: none;
+}
+
+/* ============================================
+   Selección de texto con color cálido
+   ============================================ */
+::selection {
+  background: var(--color-warm-amber);
+  color: var(--color-dusk);
+}
+
+/* ============================================
+   Scrollbar minimalista
+   ============================================ */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(245, 196, 105, 0.3);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(245, 196, 105, 0.6);
+}
+
+/* ============================================
+   Tipografías
+   ============================================ */
+.font-serif {
+  font-family: var(--font-serif), Georgia, serif;
+}
+
+.font-sans {
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* Lenis: scroll suave */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+.lenis.lenis-smooth iframe {
+  pointer-events: none;
 }
