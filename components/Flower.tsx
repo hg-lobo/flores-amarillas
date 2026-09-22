@@ -4,6 +4,7 @@ import { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
+import Stem from "./Stem";
 
 export default function Flower() {
   const groupRef = useRef<THREE.Group>(null);
@@ -79,6 +80,11 @@ export default function Flower() {
       position={[0, -0.30, 0]}
     >
       <primitive object={clonedScene} />
+
+      {/* TALLO: agregado de vuelta */}
+      <group position={[0, -0.11, 0]}>
+        <Stem />
+      </group>
     </group>
   );
 }
