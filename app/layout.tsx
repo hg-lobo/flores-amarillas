@@ -19,6 +19,11 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Feliz día de las flores amarillas",
   description: "Un pequeño viaje para tres personas especiales.",
+  icons: {
+    icon: "/icon.png",
+    shortcut: "/icon.png",
+    apple: "/icon.png",
+  },
   openGraph: {
     title: "Feliz día de las flores amarillas",
     description: "Un pequeño viaje para tres personas especiales.",
