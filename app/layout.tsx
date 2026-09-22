@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     description: "Un pequeño viaje para tres personas especiales.",
     images: [
       {
-        url: "/og-image.jpg",
+        url: "/og-image.png",
         width: 1200,
         height: 630,
         alt: "Flor amarilla con fondo dorado",
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Feliz día de las flores amarillas",
     description: "Un pequeño viaje para tres personas especiales.",
-    images: ["/og-image.jpg"],
+    images: ["/og-image.png"],
   },
   other: {
     attribution:
