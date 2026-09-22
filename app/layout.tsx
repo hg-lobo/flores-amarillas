@@ -19,6 +19,25 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Feliz día de las flores amarillas",
   description: "Un pequeño viaje para tres personas especiales.",
+  openGraph: {
+    title: "Feliz día de las flores amarillas",
+    description: "Un pequeño viaje para tres personas especiales.",
+    images: [
+      {
+        url: "/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Flor amarilla con fondo dorado",
+      },
+    ],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Feliz día de las flores amarillas",
+    description: "Un pequeño viaje para tres personas especiales.",
+    images: ["/og-image.jpg"],
+  },
   other: {
     attribution:
       '"Rudbeckia Flower" (https://skfb.ly/6BnnO) by 3dhdscan is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).',
