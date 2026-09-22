@@ -457,7 +457,7 @@ export default function Home() {
       <div
         style={{
           position: "absolute",
-          bottom: "6%",
+          bottom: isMobile ? "18%" : "6%",
           left: "50%",
           transform: "translateX(-50%)",
           color: "#fdf6e3",
@@ -465,7 +465,7 @@ export default function Home() {
           transition: "opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1)",
           pointerEvents: "none",
           zIndex: 10,
-          fontSize: "0.7rem",
+          fontSize: isMobile ? "0.65rem" : "0.7rem",
           letterSpacing: "0.3em",
           textTransform: "uppercase",
           fontFamily: "monospace",
