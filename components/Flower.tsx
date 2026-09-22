@@ -13,6 +13,10 @@ export default function Flower() {
   const clonedScene = useMemo(() => {
     const clone = scene.clone(true);
 
+    // Detectar si es móvil
+    const isMobileDevice =
+      typeof window !== "undefined" && window.innerWidth <= 768;
+
     clone.traverse((child) => {
       if (child instanceof THREE.Mesh) {
         child.castShadow = true;
@@ -55,6 +59,29 @@ export default function Flower() {
             m.roughness = 0.7;
           }
 
+          // === OPTIMIZACIÓN: reducir filtros de textura ===
+          if (isMobileDevice) {
+            // Móvil: filtros simples, sin mipmaps
+            if (m.map) {
+              m.map.minFilter = THREE.LinearFilter;
+              m.map.magFilter = THREE.LinearFilter;
+              m.map.generateMipmaps = false;
+            }
+            if (m.normalMap) {
+              m.normalMap.minFilter = THREE.LinearFilter;
+              m.normalMap.magFilter = THREE.LinearFilter;
+              m.normalMap.generateMipmaps = false;
+            }
+          } else {
+            // PC: filtros trilineales (mejor calidad, con mipmaps)
+            if (m.map) {
+              m.map.minFilter = THREE.LinearMipmapLinearFilter;
+              m.map.magFilter = THREE.LinearFilter;
+              m.map.generateMipmaps = true;
+              m.map.anisotropy = 4; // ← evita blur en ángulos
+            }
+          }
+
           m.needsUpdate = true;
         });
       }
@@ -81,7 +108,6 @@ export default function Flower() {
     >
       <primitive object={clonedScene} />
 
-      {/* TALLO: agregado de vuelta */}
       <group position={[0, -0.11, 0]}>
         <Stem />
       </group>

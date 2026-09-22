@@ -102,21 +102,21 @@ function Scene({ section, device }: { section: number; device: string }) {
   const isTablet = device === "tablet";
 
   // Partículas: menos en móvil pero sigue habiendo ambiente
-  const fireflyCount = isMobile ? 50 : isTablet ? 100 : 150;
-  const pollenCount = isMobile ? 30 : isTablet ? 50 : 70;
-  const petalCount = isMobile ? 12 : isTablet ? 18 : 25;
+  const fireflyCount = isMobile ? 40 : isTablet ? 70 : 100;
+  const pollenCount = isMobile ? 25 : isTablet ? 40 : 50;
+  const petalCount = isMobile ? 10 : isTablet ? 15 : 20;
 
   return (
     <Canvas
       camera={{ position: [0, 0, 0.6], fov: 38 }}
       gl={{
-        antialias: true,
+        antialias: false,
         powerPreference: "high-performance",
         alpha: false,
       }}
-      // Móvil: DPR 1.5 (balance entre calidad y rendimiento)
-      dpr={isMobile ? [1, 1.5] : [1, 2]}
-      // Sombras solo en desktop (es lo más caro)
+      // DPR 1.5 max (balance calidad/fluidez)
+      dpr={isMobile ? [1, 1.5] : [1, 1.5]}
+      // Sombras solo en desktop
       shadows={isMobile ? false : "soft"}
       onCreated={({ gl }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping;
@@ -125,10 +125,10 @@ function Scene({ section, device }: { section: number; device: string }) {
     >
       <fog attach="fog" args={["#0a0404", 3, 7]} />
 
-      {/* Cielo con degradado (mantener en todos) */}
+      {/* Cielo con degradado */}
       <SkyGradient />
 
-      {/* Luces: reducir cantidad en móvil pero mantener el color cálido */}
+      {/* Luces */}
       <ambientLight intensity={isMobile ? 0.5 : 0.35} color="#ffe0a0" />
 
       <directionalLight
@@ -136,15 +136,14 @@ function Scene({ section, device }: { section: number; device: string }) {
         intensity={isMobile ? 2.8 : 3.0}
         color="#ffe0a0"
         castShadow={!isMobile}
-        shadow-mapSize-width={isMobile ? 512 : 2048}
-        shadow-mapSize-height={isMobile ? 512 : 2048}
+        shadow-mapSize-width={isMobile ? 512 : 1024}
+        shadow-mapSize-height={isMobile ? 512 : 1024}
         shadow-camera-near={0.5}
         shadow-camera-far={20}
         shadow-bias={-0.0001}
         shadow-radius={4}
       />
 
-      {/* Rim light: MANTENER en todos, da el brillo cálido */}
       <directionalLight
         position={[-3, 2, 2]}
         intensity={isMobile ? 1.0 : 0.8}
@@ -163,10 +162,14 @@ function Scene({ section, device }: { section: number; device: string }) {
         color="#ffaa55"
       />
 
-      {/* Environment: MANTENER en todos (es lo que da el look cálido) */}
-      <Environment preset="sunset" environmentIntensity={0.3} />
+      {/* Environment: sin renderizar fondo (ya tenemos SkyGradient) */}
+      <Environment
+        preset="sunset"
+        environmentIntensity={0.3}
+        background={false}
+      />
 
-      {/* Partículas: mantener en todos */}
+      {/* Partículas */}
       <Fireflies count={fireflyCount} />
       <Pollen count={pollenCount} />
       <FallingPetals count={petalCount} />
@@ -177,13 +180,13 @@ function Scene({ section, device }: { section: number; device: string }) {
 
       <SectionCamera section={section} />
 
-      {/* Post-processing: mantener Bloom y Vignette en TODOS (es lo que da el brillo) */}
-      <EffectComposer multisampling={isMobile ? 0 : 4}>
+      {/* Post-processing: Bloom y Vignette en todos */}
+      <EffectComposer multisampling={isMobile ? 0 : 2}>
         <Bloom
-          intensity={isMobile ? 0.6 : 0.8}
-          luminanceThreshold={0.65}
-          luminanceSmoothing={0.5}
-          mipmapBlur
+          intensity={isMobile ? 0.6 : 0.75}
+          luminanceThreshold={0.7}
+          luminanceSmoothing={0.4}
+          mipmapBlur={!isMobile}
         />
         <Vignette eskil={false} offset={0.3} darkness={0.85} />
       </EffectComposer>
